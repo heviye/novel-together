@@ -17,21 +17,28 @@ router.post('/novels/:novelId/chapters', authMiddleware, async (req: AuthRequest
       return res.status(404).json({ error: 'Novel not found' });
     }
 
-    const lastChapter = await pool.query(
-      'SELECT MAX(chapter_number) as max FROM chapters WHERE novel_id = $1',
-      [novelId]
-    );
-    const nextNumber = (lastChapter.rows[0]?.max || 0) + 1;
+    // Use transaction to prevent race condition on chapter numbers
+    await pool.query('BEGIN');
+    try {
+      const lastChapter = await pool.query(
+        'SELECT MAX(chapter_number) as max FROM chapters WHERE novel_id = $1 FOR UPDATE',
+        [novelId]
+      );
+      const nextNumber = (lastChapter.rows[0]?.max || 0) + 1;
 
-    const result = await pool.query(
-      `INSERT INTO chapters (novel_id, chapter_number, author_id, content)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [novelId, nextNumber, req.userId, content]
-    );
+      const result = await pool.query(
+        `INSERT INTO chapters (novel_id, chapter_number, author_id, content)
+         VALUES ($1, $2, $3, $4) RETURNING *`,
+        [novelId, nextNumber, req.userId, content]
+      );
 
-    await pool.query('UPDATE novels SET updated_at = NOW() WHERE id = $1', [novelId]);
-
-    res.json(result.rows[0]);
+      await pool.query('UPDATE novels SET updated_at = NOW() WHERE id = $1', [novelId]);
+      await pool.query('COMMIT');
+      res.json(result.rows[0]);
+    } catch (e) {
+      await pool.query('ROLLBACK');
+      throw e;
+    }
   } catch (e) {
     res.status(500).json({ error: 'Internal server error' });
   }
