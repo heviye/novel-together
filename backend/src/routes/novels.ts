@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { pool } from '../db';
+import { pool, generateId } from '../db';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 
 const router = Router();
@@ -10,14 +10,14 @@ router.get('/', async (req: Request, res: Response) => {
     const limit = parseInt(req.query.limit as string) || 20;
     const offset = (page - 1) * limit;
 
-    const result = await pool.query(
+    const result = pool.query(
       `SELECT n.*, u.username as author_username,
        (SELECT COUNT(*) FROM chapters WHERE novel_id = n.id) as chapter_count
        FROM novels n
        JOIN users u ON n.author_id = u.id
        WHERE n.status = 'active'
        ORDER BY n.updated_at DESC
-       LIMIT $1 OFFSET $2`,
+       LIMIT ? OFFSET ?`,
       [limit, offset]
     );
     res.json(result.rows);
@@ -33,11 +33,12 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Title required' });
     }
 
-    const result = await pool.query(
-      'INSERT INTO novels (title, description, author_id) VALUES ($1, $2, $3) RETURNING *',
-      [title, description, req.userId]
+    const id = generateId();
+    pool.query(
+      'INSERT INTO novels (id, title, description, author_id) VALUES (?, ?, ?, ?)',
+      [id, title, description || null, req.userId]
     );
-    res.json(result.rows[0]);
+    res.json({ id, title, description, author_id: req.userId, status: 'active' });
   } catch (e) {
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -46,8 +47,8 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const result = await pool.query(
-      `SELECT n.*, u.username as author_username FROM novels n JOIN users u ON n.author_id = u.id WHERE n.id = $1`,
+    const result = pool.query(
+      `SELECT n.*, u.username as author_username FROM novels n JOIN users u ON n.author_id = u.id WHERE n.id = ?`,
       [id]
     );
     if (result.rows.length === 0) {
@@ -62,11 +63,11 @@ router.get('/:id', async (req: Request, res: Response) => {
 router.get('/:id/chapters', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const result = await pool.query(
+    const result = pool.query(
       `SELECT c.id, c.chapter_number, c.created_at, u.username as author_username
        FROM chapters c
        JOIN users u ON c.author_id = u.id
-       WHERE c.novel_id = $1
+       WHERE c.novel_id = ?
        ORDER BY c.chapter_number`,
       [id]
     );

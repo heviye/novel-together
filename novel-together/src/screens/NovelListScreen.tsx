@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { novelApi } from '../services/api';
 
 type RootStackParamList = {
   Home: undefined;
@@ -20,25 +21,35 @@ type NovelListScreenProps = {
 interface Novel {
   id: string;
   title: string;
-  author: string;
   description: string;
-  chapterCount: number;
+  author_username: string;
+  chapter_count: number;
 }
-
-// Mock data for demonstration
-const mockNovels: Novel[] = [
-  { id: '1', title: 'The Great Adventure', author: 'John Doe', description: 'An epic journey through magical lands', chapterCount: 15 },
-  { id: '2', title: 'Mystery of the Night', author: 'Jane Smith', description: 'A thrilling detective story', chapterCount: 8 },
-  { id: '3', title: 'Love in Paris', author: 'Emily Brown', description: 'A romantic tale in the city of love', chapterCount: 20 },
-];
 
 export default function NovelListScreen({ navigation }: NovelListScreenProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [novels] = useState<Novel[]>(mockNovels);
+  const [novels, setNovels] = useState<Novel[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchNovels = async () => {
+    setLoading(true);
+    try {
+      const response = await novelApi.list();
+      setNovels(response.data);
+    } catch (error: any) {
+      Alert.alert('Error', 'Failed to load novels');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNovels();
+  }, []);
 
   const filteredNovels = novels.filter(novel =>
     novel.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    novel.author.toLowerCase().includes(searchQuery.toLowerCase())
+    novel.author_username?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const renderNovelItem = ({ item }: { item: Novel }) => (
@@ -47,35 +58,40 @@ export default function NovelListScreen({ navigation }: NovelListScreenProps) {
       onPress={() => navigation.navigate('NovelDetail', { novelId: item.id })}
     >
       <Text style={styles.novelTitle}>{item.title}</Text>
-      <Text style={styles.novelAuthor}>by {item.author}</Text>
+      <Text style={styles.novelAuthor}>by {item.author_username}</Text>
       <Text style={styles.novelDescription}>{item.description}</Text>
-      <Text style={styles.chapterCount}>{item.chapterCount} chapters</Text>
+      <Text style={styles.chapterCount}>{item.chapter_count} chapters</Text>
     </TouchableOpacity>
   );
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Browse Novels</Text>
+      <Text style={styles.title}>浏览小说</Text>
       
       <TextInput
         style={styles.searchInput}
-        placeholder="Search novels..."
+        placeholder="搜索..."
         value={searchQuery}
         onChangeText={setSearchQuery}
       />
       
-      <FlatList
-        data={filteredNovels}
-        renderItem={renderNovelItem}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.list}
-      />
+      {loading ? (
+        <ActivityIndicator size="large" />
+      ) : (
+        <FlatList
+          data={filteredNovels}
+          renderItem={renderNovelItem}
+          keyExtractor={item => item.id}
+          contentContainerStyle={styles.list}
+          ListEmptyComponent={<Text style={styles.empty}>暂无小说</Text>}
+        />
+      )}
       
       <TouchableOpacity
         style={styles.backButton}
         onPress={() => navigation.navigate('Home')}
       >
-        <Text style={styles.backButtonText}>Back to Home</Text>
+        <Text style={styles.backButtonText}>返回首页</Text>
       </TouchableOpacity>
     </View>
   );
@@ -130,6 +146,11 @@ const styles = StyleSheet.create({
   chapterCount: {
     fontSize: 12,
     color: '#007AFF',
+  },
+  empty: {
+    textAlign: 'center',
+    color: '#666',
+    marginTop: 20,
   },
   backButton: {
     padding: 15,

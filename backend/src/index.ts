@@ -30,9 +30,9 @@ app.use('/api/users', userRoutes);
 app.use('/api/novels', novelRoutes);
 app.use('/api/chapters', chapterRoutes);
 
-const start = async () => {
+const start = () => {
   try {
-    await initDatabase();
+    initDatabase();
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });

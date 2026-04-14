@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Button, StyleSheet } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useAuth } from '../context/AuthContext';
 
 type RootStackParamList = {
   Home: undefined;
@@ -18,29 +19,43 @@ type HomeScreenProps = {
 };
 
 export default function HomeScreen({ navigation }: HomeScreenProps) {
+  const { user, loading } = useAuth();
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Novel Together</Text>
-      <Text style={styles.subtitle}>Create stories together</Text>
+      <Text style={styles.subtitle}>协作创作平台</Text>
       
-      <View style={styles.buttonContainer}>
-        <Button
-          title="Login"
-          onPress={() => navigation.navigate('Login')}
-        />
-        <Button
-          title="Register"
-          onPress={() => navigation.navigate('Register')}
-        />
-        <Button
-          title="Browse Novels"
-          onPress={() => navigation.navigate('NovelList')}
-        />
-        <Button
-          title="My Profile"
-          onPress={() => navigation.navigate('Profile')}
-        />
-      </View>
+      {user ? (
+        <>
+          <Text style={styles.welcome}>欢迎, {user.username}!</Text>
+          <View style={styles.buttonContainer}>
+            <Button
+              title="浏览小说"
+              onPress={() => navigation.navigate('NovelList')}
+            />
+            <Button
+              title="我的资料"
+              onPress={() => navigation.navigate('Profile')}
+            />
+          </View>
+        </>
+      ) : (
+        <View style={styles.buttonContainer}>
+          <Button
+            title="登录"
+            onPress={() => navigation.navigate('Login')}
+          />
+          <Button
+            title="注册"
+            onPress={() => navigation.navigate('Register')}
+          />
+          <Button
+            title="浏览小说"
+            onPress={() => navigation.navigate('NovelList')}
+          />
+        </View>
+      )}
     </View>
   );
 }
@@ -62,6 +77,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     marginBottom: 40,
+  },
+  welcome: {
+    fontSize: 18,
+    marginBottom: 20,
   },
   buttonContainer: {
     gap: 15,

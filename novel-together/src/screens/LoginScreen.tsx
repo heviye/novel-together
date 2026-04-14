@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, Button, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useAuth } from '../context/AuthContext';
 
 type RootStackParamList = {
   Home: undefined;
@@ -20,15 +21,24 @@ type LoginScreenProps = {
 export default function LoginScreen({ navigation }: LoginScreenProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
-    // TODO: Implement actual login API call
-    Alert.alert('Success', 'Login successful');
-    navigation.navigate('Home');
+
+    setLoading(true);
+    try {
+      await login(email, password);
+      navigation.navigate('Home');
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.error || 'Login failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -52,7 +62,11 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
           secureTextEntry
         />
         
-        <Button title="Login" onPress={handleLogin} />
+        {loading ? (
+          <ActivityIndicator size="large" />
+        ) : (
+          <Button title="Login" onPress={handleLogin} />
+        )}
         
         <View style={styles.linkContainer}>
           <Text>Don't have an account? </Text>

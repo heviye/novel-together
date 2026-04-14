@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { pool } from '../db';
+import { pool, generateId } from '../db';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 
 const router = Router();
@@ -7,8 +7,8 @@ const router = Router();
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const result = await pool.query(
-      'SELECT id, username, bio, avatar_url, created_at FROM users WHERE id = $1',
+    const result = pool.query(
+      'SELECT id, username, bio, avatar_url, created_at FROM users WHERE id = ?',
       [id]
     );
     if (result.rows.length === 0) {
@@ -27,10 +27,12 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ error: 'Forbidden' });
     }
     const { bio, avatar_url } = req.body;
-    await pool.query(
-      'UPDATE users SET bio = COALESCE($1, bio), avatar_url = COALESCE($2, avatar_url) WHERE id = $3',
-      [bio, avatar_url, id]
-    );
+    if (bio !== undefined) {
+      pool.query('UPDATE users SET bio = ? WHERE id = ?', [bio, id]);
+    }
+    if (avatar_url !== undefined) {
+      pool.query('UPDATE users SET avatar_url = ? WHERE id = ?', [avatar_url, id]);
+    }
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: 'Internal server error' });
@@ -43,10 +45,14 @@ router.post('/:id/follow', authMiddleware, async (req: AuthRequest, res: Respons
     if (req.userId === id) {
       return res.status(400).json({ error: 'Cannot follow yourself' });
     }
-    await pool.query(
-      'INSERT INTO follows (follower_id, following_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-      [req.userId, id]
-    );
+    try {
+      pool.query(
+        'INSERT INTO follows (id, follower_id, following_id) VALUES (?, ?, ?)',
+        [generateId(), req.userId, id]
+      );
+    } catch (e) {
+      // Ignore duplicate
+    }
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: 'Internal server error' });
@@ -56,7 +62,7 @@ router.post('/:id/follow', authMiddleware, async (req: AuthRequest, res: Respons
 router.delete('/:id/follow', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    await pool.query('DELETE FROM follows WHERE follower_id = $1 AND following_id = $2', [req.userId, id]);
+    pool.query('DELETE FROM follows WHERE follower_id = ? AND following_id = ?', [req.userId, id]);
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: 'Internal server error' });
@@ -66,9 +72,9 @@ router.delete('/:id/follow', authMiddleware, async (req: AuthRequest, res: Respo
 router.get('/:id/followers', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const result = await pool.query(
+    const result = pool.query(
       `SELECT u.id, u.username, u.avatar_url FROM users u
-       JOIN follows f ON f.follower_id = u.id WHERE f.following_id = $1`,
+       JOIN follows f ON f.follower_id = u.id WHERE f.following_id = ?`,
       [id]
     );
     res.json(result.rows);
@@ -80,9 +86,9 @@ router.get('/:id/followers', async (req: Request, res: Response) => {
 router.get('/:id/following', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const result = await pool.query(
+    const result = pool.query(
       `SELECT u.id, u.username, u.avatar_url FROM users u
-       JOIN follows f ON f.following_id = u.id WHERE f.follower_id = $1`,
+       JOIN follows f ON f.following_id = u.id WHERE f.follower_id = ?`,
       [id]
     );
     res.json(result.rows);
