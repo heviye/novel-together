@@ -6,6 +6,12 @@ import authRoutes from './routes/auth';
 
 dotenv.config();
 
+// Check JWT_SECRET is set
+if (!process.env.JWT_SECRET) {
+  console.error('JWT_SECRET is not set in environment variables');
+  process.exit(1);
+}
+
 const app = express();
 app.use(cors());
 app.use(express.json());
