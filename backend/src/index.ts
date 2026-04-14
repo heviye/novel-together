@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { initDatabase } from './db';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
+import novelRoutes from './routes/novels';
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.get('/health', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/novels', novelRoutes);
 
 const start = async () => {
   try {
