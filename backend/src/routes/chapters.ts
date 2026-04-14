@@ -64,4 +64,71 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
+router.post('/:id/like', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    await pool.query(
+      'INSERT INTO likes (user_id, chapter_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      [req.userId, id]
+    );
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.delete('/:id/like', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    await pool.query('DELETE FROM likes WHERE user_id = $1 AND chapter_id = $2', [req.userId, id]);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/:id/likes', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(
+      'SELECT COUNT(*) as count FROM likes WHERE chapter_id = $1',
+      [id]
+    );
+    res.json({ count: parseInt(result.rows[0].count) });
+  } catch (e) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/:id/comments', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { content } = req.body;
+    if (!content) {
+      return res.status(400).json({ error: 'Content required' });
+    }
+    const result = await pool.query(
+      'INSERT INTO comments (user_id, chapter_id, content) VALUES ($1, $2, $3) RETURNING *',
+      [req.userId, id, content]
+    );
+    res.json(result.rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/:id/comments', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(
+      `SELECT c.*, u.username as author_username FROM comments c
+       JOIN users u ON c.author_id = u.id WHERE c.chapter_id = $1 ORDER BY c.created_at`,
+      [id]
+    );
+    res.json(result.rows);
+  } catch (e) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;
