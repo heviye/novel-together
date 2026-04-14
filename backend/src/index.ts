@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { initDatabase } from './db';
 import authRoutes from './routes/auth';
+import userRoutes from './routes/users';
 
 dotenv.config();
 
@@ -23,6 +24,7 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 
 const start = async () => {
   try {
