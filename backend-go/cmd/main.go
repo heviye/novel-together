@@ -32,7 +32,7 @@ func main() {
 	middleware.SetJWTSecret(cfg.JWT.Secret)
 
 	// Initialize database
-	db, err := models.InitDBWithDSN(cfg.Database.DSN())
+	db, err := models.InitDBWithDSN(cfg.Database.DSN(), cfg.Database.Driver)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}

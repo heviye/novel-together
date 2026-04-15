@@ -14,11 +14,13 @@ type Config struct {
 }
 
 type DatabaseConfig struct {
+	Driver   string `yaml:"driver"` // sqlite or postgres
 	Host     string `yaml:"host"`
 	Port     int    `yaml:"port"`
 	Name     string `yaml:"name"`
 	User     string `yaml:"user"`
 	Password string `yaml:"password"`
+	Path     string `yaml:"path"` // only for sqlite
 }
 
 type AppConfig struct {
@@ -48,6 +50,21 @@ func Load(path string) (*Config, error) {
 }
 
 func (d *DatabaseConfig) DSN() string {
-	return fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable",
-		d.Host, d.User, d.Password, d.Name, d.Port)
+	switch d.Driver {
+	case "sqlite":
+		return d.Path
+	case "postgres":
+		return fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable",
+			d.Host, d.User, d.Password, d.Name, d.Port)
+	default:
+		return d.Path // default to sqlite
+	}
+}
+
+func (d *DatabaseConfig) IsSQLite() bool {
+	return d.Driver == "sqlite" || d.Driver == ""
+}
+
+func (d *DatabaseConfig) IsPostgres() bool {
+	return d.Driver == "postgres"
 }
