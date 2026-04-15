@@ -1,9 +1,9 @@
 import axios from 'axios';
 import '../types';
 
-// 模拟器用: http://10.0.2.2:3100/api
-// 真机用: 改为电脑局域网IP，如 http://192.168.1.XX:3100/api
-const API_URL = 'http://10.0.2.2:3100/api';
+// 模拟器用: http://10.0.2.2:3000/api
+// 真机用: 改为电脑局域网IP，如 http://192.168.1.XX:3000/api
+const API_URL = 'http://10.0.2.2:3000/api';
 
 const api = axios.create({
   baseURL: API_URL,
