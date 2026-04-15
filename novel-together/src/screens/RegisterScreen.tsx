@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, Button, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { authApi } from '../services/api';
 
 type RootStackParamList = {
   Home: undefined;
@@ -22,35 +23,50 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if (!username || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert('错误', '请填写所有字段');
       return;
     }
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      Alert.alert('错误', '两次密码输入不一致');
       return;
     }
-    // TODO: Implement actual registration API call
-    Alert.alert('Success', 'Registration successful');
-    navigation.navigate('Login');
+    if (password.length < 6) {
+      Alert.alert('错误', '密码至少6位');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await authApi.register(username, email, password);
+      Alert.alert('成功', '注册成功，请登录');
+      navigation.navigate('Login');
+    } catch (error: any) {
+      const msg = error.response?.data?.error || '注册失败';
+      Alert.alert('错误', msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Register</Text>
+      <Text style={styles.title}>注册</Text>
       
       <View style={styles.form}>
         <TextInput
           style={styles.input}
-          placeholder="Username"
+          placeholder="用户名"
           value={username}
           onChangeText={setUsername}
+          autoCapitalize="none"
         />
         <TextInput
           style={styles.input}
-          placeholder="Email"
+          placeholder="邮箱"
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
@@ -58,29 +74,33 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
         />
         <TextInput
           style={styles.input}
-          placeholder="Password"
+          placeholder="密码"
           value={password}
           onChangeText={setPassword}
           secureTextEntry
         />
         <TextInput
           style={styles.input}
-          placeholder="Confirm Password"
+          placeholder="确认密码"
           value={confirmPassword}
           onChangeText={setConfirmPassword}
           secureTextEntry
         />
         
-        <Button title="Register" onPress={handleRegister} />
+        {loading ? (
+          <ActivityIndicator size="large" />
+        ) : (
+          <Button title="注册" onPress={handleRegister} />
+        )}
         
         <View style={styles.linkContainer}>
-          <Text>Already have an account? </Text>
+          <Text>已有账号? </Text>
           <Text style={styles.link} onPress={() => navigation.navigate('Login')}>
-            Login
+            登录
           </Text>
         </View>
         
-        <Button title="Back to Home" onPress={() => navigation.navigate('Home')} />
+        <Button title="返回首页" onPress={() => navigation.navigate('Home')} />
       </View>
     </View>
   );
