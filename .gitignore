@@ -6,4 +6,5 @@ dist/
 .worktrees/
 backend-go/*.db
 backend-go/config.yaml
-*.db
+backend/novel_together.db
+backend/*.db

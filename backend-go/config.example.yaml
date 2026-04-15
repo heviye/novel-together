@@ -7,4 +7,7 @@ app:
   port: "3000"
 
 jwt:
-  secret: ""
+  secret: ""  # 必须填写
+
+cors:
+  origins: "*"  # 允许所有来源，或用逗号分隔如 "http://localhost:8081,http://localhost:3000"

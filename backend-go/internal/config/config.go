@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -11,6 +12,7 @@ type Config struct {
 	Database DatabaseConfig `yaml:"database"`
 	App      AppConfig      `yaml:"app"`
 	JWT      JWTConfig      `yaml:"jwt"`
+	CORS     CORSConfig     `yaml:"cors"`
 }
 
 type DatabaseConfig struct {
@@ -30,6 +32,10 @@ type AppConfig struct {
 
 type JWTConfig struct {
 	Secret string `yaml:"secret"`
+}
+
+type CORSConfig struct {
+	Origins string `yaml:"origins"` // comma-separated list of allowed origins, "*" for all
 }
 
 var AppConf *Config
@@ -67,4 +73,16 @@ func (d *DatabaseConfig) IsSQLite() bool {
 
 func (d *DatabaseConfig) IsPostgres() bool {
 	return d.Driver == "postgres"
+}
+
+func (c *CORSConfig) AllowedOrigin(origin string) bool {
+	if c.Origins == "" || c.Origins == "*" {
+		return true
+	}
+	for _, o := range strings.Split(c.Origins, ",") {
+		if strings.TrimSpace(o) == origin {
+			return true
+		}
+	}
+	return false
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/heviye/novel-together-backend/internal/config"
@@ -63,13 +64,39 @@ func main() {
 	// Setup Gin
 	r := gin.Default()
 
-	// CORS middleware
+	// CORS middleware - configurable via config
 	r.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		origin := c.Request.Header.Get("Origin")
+
+		// Check if origin is allowed
+		allowed := cfg.CORS.AllowedOrigin(origin)
+		if allowed || cfg.CORS.Origins == "" || cfg.CORS.Origins == "*" {
+			if origin != "" {
+				c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+			} else {
+				c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+			}
+		} else {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		}
+
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, Authorization, X-Requested-With")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
+
 		if c.Request.Method == "OPTIONS" {
-			c.Abort()
+			method := c.Request.Header.Get("Access-Control-Request-Method")
+			if method == "" {
+				method = c.Request.Header.Get("Access-Control-Request-Method")
+			}
+			if strings.EqualFold(method, "POST") || strings.EqualFold(method, "GET") ||
+				strings.EqualFold(method, "PUT") || strings.EqualFold(method, "DELETE") ||
+				strings.EqualFold(method, "PATCH") || strings.EqualFold(method, "OPTIONS") {
+				c.AbortWithStatus(204)
+				return
+			}
+			c.AbortWithStatus(204)
 			return
 		}
 		c.Next()
@@ -96,5 +123,6 @@ func main() {
 	if host == "" {
 		host = "0.0.0.0"
 	}
+	log.Printf("Server starting on %s:%s", host, port)
 	r.Run(host + ":" + port)
 }
