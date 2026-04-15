@@ -1,22 +1,36 @@
 package main
 
 import (
+	"flag"
 	"log"
-	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/heviye/novel-together-backend/internal/config"
+	"github.com/heviye/novel-together-backend/internal/middleware"
 	"github.com/heviye/novel-together-backend/internal/models"
 	"github.com/heviye/novel-together-backend/internal/routes"
 )
 
 func main() {
-	// Check JWT_SECRET
-	if os.Getenv("JWT_SECRET") == "" {
-		log.Fatal("JWT_SECRET is required")
+	configPath := flag.String("config", "config.yaml", "path to config file")
+	flag.Parse()
+
+	// Load config
+	cfg, err := config.Load(*configPath)
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
 	}
 
+	// Check JWT_SECRET
+	if cfg.JWT.Secret == "" {
+		log.Fatal("JWT_SECRET is required in config")
+	}
+
+	// Set JWT secret for middleware
+	middleware.SetJWTSecret(cfg.JWT.Secret)
+
 	// Initialize database
-	db, err := models.InitDB()
+	db, err := models.InitDBWithDSN(cfg.Database.DSN())
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
@@ -61,9 +75,13 @@ func main() {
 		routes.RegisterChapterRoutes(api, db)
 	}
 
-	port := os.Getenv("PORT")
+	port := cfg.App.Port
 	if port == "" {
 		port = "3000"
 	}
-	r.Run(":" + port)
+	host := cfg.App.Host
+	if host == "" {
+		host = "0.0.0.0"
+	}
+	r.Run(host + ":" + port)
 }

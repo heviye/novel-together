@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -11,7 +10,11 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var JWT_SECRET = []byte(os.Getenv("JWT_SECRET"))
+var jwtSecret []byte
+
+func SetJWTSecret(secret string) {
+	jwtSecret = []byte(secret)
+}
 
 func HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -31,7 +34,7 @@ func GenerateToken(userID, username string) (string, error) {
 		"iat":      time.Now().Unix(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(JWT_SECRET)
+	return token.SignedString(jwtSecret)
 }
 
 func GenerateUUID() string {
@@ -57,7 +60,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-			return JWT_SECRET, nil
+			return jwtSecret, nil
 		})
 
 		if err != nil || !token.Valid {
