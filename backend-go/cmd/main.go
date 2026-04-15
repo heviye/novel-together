@@ -6,9 +6,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/heviye/novel-together-backend/internal/config"
+	"github.com/heviye/novel-together-backend/internal/controller"
 	"github.com/heviye/novel-together-backend/internal/middleware"
 	"github.com/heviye/novel-together-backend/internal/models"
 	"github.com/heviye/novel-together-backend/internal/routes"
+	"github.com/heviye/novel-together-backend/internal/service"
 )
 
 func main() {
@@ -47,6 +49,17 @@ func main() {
 		log.Fatalf("Failed to migrate: %v", err)
 	}
 
+	// Create services
+	userSvc := service.NewUserService(db)
+	novelSvc := service.NewNovelService(db)
+	chapterSvc := service.NewChapterService(db)
+
+	// Create controllers
+	authCtrl := controller.NewAuthController(userSvc)
+	userCtrl := controller.NewUserController(userSvc)
+	novelCtrl := controller.NewNovelController(novelSvc)
+	chapterCtrl := controller.NewChapterController(chapterSvc)
+
 	// Setup Gin
 	r := gin.Default()
 
@@ -69,10 +82,10 @@ func main() {
 	// API routes
 	api := r.Group("/api")
 	{
-		routes.RegisterAuthRoutes(api, db)
-		routes.RegisterUserRoutes(api, db)
-		routes.RegisterNovelRoutes(api, db)
-		routes.RegisterChapterRoutes(api, db)
+		routes.RegisterAuthRoutes(api, db, authCtrl)
+		routes.RegisterUserRoutes(api, db, userCtrl)
+		routes.RegisterNovelRoutes(api, db, novelCtrl)
+		routes.RegisterChapterRoutes(api, db, chapterCtrl)
 	}
 
 	port := cfg.App.Port
