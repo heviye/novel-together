@@ -42,3 +42,4 @@ yarn-error.*
 
 # local config
 src/config.ts
+*.db
