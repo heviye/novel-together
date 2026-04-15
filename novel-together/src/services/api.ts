@@ -1,6 +1,9 @@
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
+import '../types';
 
-const API_URL = 'http://10.0.2.2:3000/api';
+// 模拟器用: http://10.0.2.2:3100/api
+// 真机用: 改为电脑局域网IP，如 http://192.168.1.XX:3100/api
+const API_URL = 'http://10.0.2.2:3100/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -15,11 +18,11 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-export const setToken = (token: string | null) => {
-  globalThis.__token = token;
+export const setToken = (token: string | null | undefined) => {
+  globalThis.__token = token ?? undefined;
 };
 
-export const getToken = () => globalThis.__token;
+export const getToken = (): string | undefined => globalThis.__token;
 
 // Auth
 export const authApi = {

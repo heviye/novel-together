@@ -10,8 +10,9 @@ import NovelDetailScreen from './src/screens/NovelDetailScreen';
 import WriteChapterScreen from './src/screens/WriteChapterScreen';
 import ChapterScreen from './src/screens/ChapterScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import { RootStackParamList } from './src/types';
 
-const Stack = createNativeStackNavigator();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
   return (
