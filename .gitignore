@@ -8,3 +8,4 @@ backend-go/*.db
 backend-go/config.yaml
 backend/novel_together.db
 backend/*.db
+backend-go/server

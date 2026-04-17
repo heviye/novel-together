@@ -25,10 +25,18 @@ type Novel struct {
 	Description *string   `json:"description"`
 	AuthorID    string    `gorm:"not null" json:"author_id"`
 	Author      User      `gorm:"foreignKey:AuthorID" json:"author,omitempty"`
+	IsMainline  bool      `gorm:"default:false" json:"is_mainline"`
 	Status      string    `gorm:"default:active" json:"status"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
+
+type NovelWithStats struct {
+	Novel
+	TotalLikes int64 `json:"total_likes"`
+	LikeCount  int64 `json:"like_count"`
+}
+
 
 type Chapter struct {
 	ID            string    `gorm:"primaryKey" json:"id"`

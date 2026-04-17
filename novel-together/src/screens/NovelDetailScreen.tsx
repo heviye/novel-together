@@ -1,7 +1,8 @@
-import React from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Button } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Button } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
+import { novelApi, chapterApi } from '../services/api';
 
 type RootStackParamList = {
   Home: undefined;
@@ -19,14 +20,23 @@ type NovelDetailScreenProps = {
   route: RouteProp<RootStackParamList, 'NovelDetail'>;
 };
 
-interface Chapter {
+type Novel = {
+  id: string;
+  title: string;
+  author: string;
+  description: string;
+  genre: string;
+  status: string;
+};
+
+type Chapter = {
   id: string;
   title: string;
   number: number;
   author: string;
-}
+};
 
-// Mock data for demonstration
+// Mock data fallback
 const mockNovel = {
   id: '1',
   title: 'The Great Adventure',
@@ -46,6 +56,36 @@ const mockChapters: Chapter[] = [
 
 export default function NovelDetailScreen({ navigation, route }: NovelDetailScreenProps) {
   const { novelId } = route.params;
+  const [novel, setNovel] = useState<Novel | null>(null);
+  const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchNovelData();
+  }, [novelId]);
+
+  const fetchNovelData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Fetch novel details
+      const novelResponse = await novelApi.get(novelId);
+      setNovel(novelResponse.data);
+      
+      // Fetch chapters
+      const chaptersResponse = await novelApi.getChapters(novelId);
+      setChapters(chaptersResponse.data);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to load novel data');
+      Alert.alert('Error', 'Failed to load novel data, using mock data');
+      // Fallback to mock data
+      setNovel(mockNovel);
+      setChapters(mockChapters);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const renderChapterItem = ({ item }: { item: Chapter }) => (
     <TouchableOpacity
@@ -58,24 +98,36 @@ export default function NovelDetailScreen({ navigation, route }: NovelDetailScre
     </TouchableOpacity>
   );
 
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  if (!novel) {
+    return null;
+  }
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{mockNovel.title}</Text>
-      <Text style={styles.author}>by {mockNovel.author}</Text>
+      <Text style={styles.title}>{novel.title}</Text>
+      <Text style={styles.author}>by {novel.author}</Text>
       <View style={styles.metaContainer}>
-        <Text style={styles.genre}>{mockNovel.genre}</Text>
-        <Text style={styles.status}>{mockNovel.status}</Text>
+        <Text style={styles.genre}>{novel.genre}</Text>
+        <Text style={styles.status}>{novel.status}</Text>
       </View>
-      <Text style={styles.description}>{mockNovel.description}</Text>
+      <Text style={styles.description}>{novel.description}</Text>
       
       <Button
         title="Write New Chapter"
-        onPress={() => navigation.navigate('WriteChapter', { novelId })}
+        onPress={() => navigation.navigate('WriteChapter', { novelId: novel.id })}
       />
       
       <Text style={styles.chaptersTitle}>Chapters</Text>
       <FlatList
-        data={mockChapters}
+        data={chapters}
         renderItem={renderChapterItem}
         keyExtractor={item => item.id}
         style={styles.chapterList}
@@ -100,75 +152,71 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 5,
+    marginBottom: 10,
   },
   author: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 10,
+    fontSize: 18,
+    color: '#333',
+    marginBottom: 5,
   },
   metaContainer: {
     flexDirection: 'row',
-    gap: 10,
     marginBottom: 15,
   },
   genre: {
-    backgroundColor: '#e0e0e0',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 5,
-    fontSize: 12,
+    fontSize: 14,
+    color: '#666',
+    marginRight: 15,
   },
   status: {
-    backgroundColor: '#4CAF50',
-    color: '#fff',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 5,
-    fontSize: 12,
+    fontSize: 14,
+    color: '#666',
   },
   description: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#333',
     marginBottom: 20,
-    lineHeight: 20,
+    lineHeight: 24,
   },
   chaptersTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
-    marginTop: 20,
-    marginBottom: 10,
-  },
-  chapterList: {
-    flex: 1,
+    marginBottom: 15,
   },
   chapterItem: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 5,
-    padding: 12,
-    marginBottom: 10,
-    backgroundColor: '#f9f9f9',
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
   chapterNumber: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   chapterTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    marginVertical: 3,
+    marginTop: 5,
   },
   chapterAuthor: {
-    fontSize: 12,
-    color: '#007AFF',
+    fontSize: 14,
+    color: '#666',
+    marginTop: 5,
   },
   backButton: {
     padding: 15,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 5,
     alignItems: 'center',
+    marginTop: 10,
+  },
+  homeButton: {
+    padding: 15,
   },
   backButtonText: {
     color: '#007AFF',
-    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  homeButtonText: {
+    color: '#007AFF',
+    fontWeight: 'bold',
   },
 });

@@ -1,7 +1,8 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Button } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
+import { chapterApi } from '../services/api';
 
 type RootStackParamList = {
   Home: undefined;
@@ -19,46 +20,90 @@ type ChapterScreenProps = {
   route: RouteProp<RootStackParamList, 'Chapter'>;
 };
 
-// Mock data for demonstration
-const mockChapter = {
-  id: '1',
-  title: 'The Beginning',
-  number: 1,
-  author: 'John Doe',
-  content: `It was a dark and stormy night when the young protagonist first set out on their journey. The village behind them was silent, its inhabitants sleeping soundly, unaware of the adventure that awaited.
-
-The path ahead was shrouded in mist, but our hero pressed forward with determination. Every step brought them closer to their destiny, closer to uncovering the ancient secrets that had been hidden for centuries.
-
-As they traveled through the forest, strange sounds echoed around them. Twigs snapped underfoot, and shadows seemed to dance between the trees. But our hero was not afraid. They had trained for this moment their entire life.
-
-Finally, they reached the edge of the forest. Before them lay a vast landscape of mountains and valleys, each promising new challenges and new discoveries. With a deep breath, our hero stepped forward into the unknown.`,
-  createdAt: '2024-01-15',
+type Chapter = {
+  id: string;
+  title: string;
+  number: number;
+  author: string;
+  content: string;
+  createdAt: string;
 };
 
 export default function ChapterScreen({ navigation, route }: ChapterScreenProps) {
   const { chapterId } = route.params;
+  const [chapter, setChapter] = useState<Chapter | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchChapter();
+  }, [chapterId]);
+
+  const fetchChapter = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await chapterApi.get(chapterId);
+      setChapter(response.data);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to load chapter');
+      Alert.alert('Error', 'Failed to load chapter');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={fetchChapter}
+        >
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (!chapter) {
+    return null;
+  }
 
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView}>
-        <Text style={styles.title}>{mockChapter.title}</Text>
+        <Text style={styles.title}>{chapter.title}</Text>
         <Text style={styles.meta}>
-          Chapter {mockChapter.number} | by {mockChapter.author}
+          Chapter {chapter.number} | by {chapter.author}
         </Text>
-        <Text style={styles.date}>Published: {mockChapter.createdAt}</Text>
+        <Text style={styles.date}>Published: {chapter.createdAt}</Text>
         
-        <Text style={styles.content}>{mockChapter.content}</Text>
+        <Text style={styles.content}>{chapter.content}</Text>
       </ScrollView>
       
       <View style={styles.buttonContainer}>
-        <Button
-          title="Back to Novel"
+        <TouchableOpacity
+          style={styles.backButton}
           onPress={() => navigation.goBack()}
-        />
-        <Button
-          title="Home"
+        >
+          <Text style={styles.backButtonText}>Back to Novel</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.homeButton}
           onPress={() => navigation.navigate('Home')}
-        />
+        >
+          <Text style={styles.homeButtonText}>Home</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -99,5 +144,35 @@ const styles = StyleSheet.create({
     padding: 15,
     borderTopWidth: 1,
     borderTopColor: '#ddd',
+  },
+  backButton: {
+    padding: 10,
+  },
+  homeButton: {
+    padding: 10,
+  },
+  backButtonText: {
+    color: '#007AFF',
+    fontWeight: 'bold',
+  },
+  homeButtonText: {
+    color: '#007AFF',
+    fontWeight: 'bold',
+  },
+  errorText: {
+    color: 'red',
+    textAlign: 'center',
+    marginTop: 20,
+  },
+  retryButton: {
+    backgroundColor: '#007AFF',
+    padding: 15,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
   },
 });

@@ -54,9 +54,13 @@ func (c *NovelController) Create(ctx *gin.Context) {
 
 func (c *NovelController) Get(ctx *gin.Context) {
 	id := ctx.Param("id")
-	novel, err := c.novelSvc.GetByID(id)
+	novel, err := c.novelSvc.GetNovelWithStats(id)
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "Novel not found"})
+		if err == service.ErrNovelNotFound {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get novel"})
 		return
 	}
 	ctx.JSON(http.StatusOK, novel)
@@ -70,4 +74,43 @@ func (c *NovelController) GetChapters(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, chapters)
+}
+
+// GetStats 获取小说的统计信息（点赞数等）
+func (c *NovelController) GetStats(ctx *gin.Context) {
+	id := ctx.Param("id")
+	stats, err := c.novelSvc.GetNovelWithStats(id)
+	if err != nil {
+		if err == service.ErrNovelNotFound {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get stats"})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{
+		"novel_id":    stats.ID,
+		"title":       stats.Title,
+		"total_likes": stats.TotalLikes,
+		"is_mainline": stats.IsMainline,
+	})
+}
+
+// RecalculateMainline 手动触发主线重计算（管理员接口）
+func (c *NovelController) RecalculateMainline(ctx *gin.Context) {
+	if err := c.novelSvc.RecalculateMainline(); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to recalculate mainline"})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": "Mainline recalculated successfully"})
+}
+
+// GetAllStats 获取所有小说的统计（调试用）
+func (c *NovelController) GetAllStats(ctx *gin.Context) {
+	stats, err := c.novelSvc.GetAllNovelsWithStats()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get stats"})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"novels": stats})
 }

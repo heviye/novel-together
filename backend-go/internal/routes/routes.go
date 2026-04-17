@@ -46,6 +46,14 @@ func RegisterNovelRoutes(api *gin.RouterGroup, db *gorm.DB, novelCtrl *controlle
 
 		novels.GET("/:id", novelCtrl.Get)
 		novels.GET("/:id/chapters", novelCtrl.GetChapters)
+		novels.GET("/:id/stats", novelCtrl.GetStats)
+	}
+
+	// 管理接口（临时开放，后续可加权限）
+	admin := api.Group("/admin/novels")
+	{
+		admin.POST("/recalculate-mainline", novelCtrl.RecalculateMainline)
+		admin.GET("/all-stats", novelCtrl.GetAllStats)
 	}
 }
 
